@@ -1,23 +1,32 @@
-import mysqlx
 
-# Connect to server on localhost
-session = mysqlx.get_session({
-    'host': 'localhost',
-    'port': 33060,
-    'user': 'mike',
-    'password': 's3cr3t!'
-})
+import mysql.connector
 
-schema = session.get_schema('test')
+config = {
+        "user" : "root",
+        "password" : "MyFunP@ssw0rd",
+        "host" : "127.0.0.1",
+        "database" : "san_francisco_public_library"
+        }
+connection = mysql.connector.connect(**config)
 
-# Use the collection 'my_collection'
-collection = schema.get_collection('my_collection')
+def execute_operation(operation):
+    if (operation == "exit"):
+        return False
+    elif(operation == "0"):
+        cursor = connection.cursor()
+        cursor.execute("SHOW TABLES")
 
-# Specify which document to find with Collection.find()
-result = collection.find('name like :param').bind('param', 'S%').limit(1).execute()
+        print("\nTables in this database:")
+        for table in cursor.fetchall():
+            print(table[0])
 
-# Print document
-docs = result.fetch_all()
-print('Name: {0}'.format(docs[0]['name']))
+    return True
 
-session.close()
+
+is_running = True
+while (is_running):
+    operation = input("\nWhat would you like to do?\n").casefold()
+    is_running = execute_operation(operation)
+
+
+connection.close()
