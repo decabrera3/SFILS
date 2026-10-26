@@ -1,47 +1,99 @@
 
 import mysql.connector
+import pandas as pd
 
 RESET_COLOR = "\033[0m"
-RED = "\033[31m"
-YELLOW = "\033[33m"
-CYAN = "\033[36m"
+RED_COLOR = "\033[31m"
+YELLOW_COLOR = "\033[33m"
+CYAN_COLOR = "\033[36m"
+GREEN_COLOR = "\033[32m"
 
-SHOW_TABLES = "0"
+SHOW_TABLES_COMMAND = "0"
+RESET_DATABASE_COMMAND = "100"
+HELP_COMMAND = "help"
+EXIT_COMMAND = "exit"
+TEST_COMMAND = "test"
+
+DATABASE = "san_francisco_public_library"
 
 config = {
         "user" : "root",
         "password" : "MyFunP@ssw0rd",
         "host" : "127.0.0.1",
-        "database" : "san_francisco_public_library"
+        "database" : DATABASE
         }
 connection = mysql.connector.connect(**config)
+cursor = connection.cursor()
+
+data = pd.DataFrame()
+
+def get_boolean_input(prompt = ""):
+
+    print(f"{prompt} [{CYAN_COLOR}y{RESET_COLOR},{CYAN_COLOR}N{RESET_COLOR}]")
+    answer = input(f"   > {YELLOW_COLOR}").casefold()
+    print(RESET_COLOR, end="")
+    if (answer == "y" or answer == "yes"):
+        return True
+    return False
+
+def print_command(command, description):
+    num_of_spaces = len(command)
+
+    for i in range(5 - num_of_spaces):
+        print(" ", end="")
+    print(f"{CYAN_COLOR} {command} {RESET_COLOR} | {description}")
 
 def print_help():
+
     print("Command | Description")
-    print("      " + CYAN + SHOW_TABLES + RESET_COLOR + " | Shows all the tables in the database.")
+    print("--------------------------------------------")
+    print_command(SHOW_TABLES_COMMAND, "Shows all the tables in the database.")
+    print_command(RESET_DATABASE_COMMAND, "Clears the database and adds all data to it.")
+    print()
+    print_command(HELP_COMMAND, "Prints all the available commands.")
+    print_command(EXIT_COMMAND, "Exits the program.")
+
+def reset_database():
+    global data
+
+    if (not get_boolean_input("This may potentially corrupt the database. Continut?")):
+        return
+
+    print("Reading data from file...")
+    data = pd.read_excel("../Data.xlsx")
+
+    cursor.execute("TRUNCATE TABLE PATRON")
+
+    print(f"{GREEN_COLOR}Operation Completed Succesfully{RESET_COLOR}")
 
 def execute_operation(operation):
 
-    if (operation == "exit"):
+    if (operation == EXIT_COMMAND):
         return False
-    elif (operation == "help"):
+    elif (operation == HELP_COMMAND):
         print_help()
-    elif(operation == SHOW_TABLES):
-        cursor = connection.cursor()
+    elif(operation == SHOW_TABLES_COMMAND):
         cursor.execute("SHOW TABLES")
 
         print("\nTables in this database:")
         for table in cursor.fetchall():
             print(table[0])
+    elif (operation == RESET_DATABASE_COMMAND):
+        reset_database()
+    elif (operation == "test"):
+        print(data.head(8))
     else:
-        print(RED + "Invalid Command" + RESET_COLOR)
+        print(f"{RED_COLOR}Invalid Command.{RESET_COLOR}")
 
     return True
 
 
+print_help()
+
 is_running = True
 while (is_running):
-    operation = input("\nWhat would you like to do?\n>> " + YELLOW).casefold()
+
+    operation = input(f"\nWhat would you like to do?\n>> {YELLOW_COLOR}").casefold()
     print(RESET_COLOR, end="")
     is_running = execute_operation(operation)
 
