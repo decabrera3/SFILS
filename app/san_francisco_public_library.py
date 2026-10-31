@@ -19,6 +19,14 @@ TEST_COMMAND = "test"
 
 DATABASE = "san_francisco_public_library"
 
+PATRON_TYPE = {
+    "table" : "PATRON_TYPE",
+    "database code" : "PatronTypeCode",
+    "database description" : "PatronTypeDescription",
+    "file code" : "Patron Type Code\npatron_type_code",
+    "file description" : "Patron Type Definition\n"
+}
+
 config = {
         "user" : "root",
         "password" : "MyFunP@ssw0rd",
@@ -63,7 +71,7 @@ def print_formated_table():
     query = pd.DataFrame(cursor.fetchall(), columns=cursor.column_names)
     print(query.to_markdown(index=False, tablefmt="psql"))
 
-def does_table_exist(table_name: str):
+def does_table_exist(table_name: str) -> bool:
 
     cursor.execute("SHOW TABLES")
     for table in cursor.fetchall():
@@ -71,16 +79,25 @@ def does_table_exist(table_name: str):
             return True
     return False
 
-def insert_patron_type():
+def insert_basic_table(table: dict) -> bool:
 
-    if (not does_table_exist("PATRON_TYPE")):
-        print(f"{RED_COLOR}Insertion Failed: PATRON_TYPE does not exist.{RESET_COLOR}")
+    used_codes = set()
+
+    if (not does_table_exist(table["table"])):
+        print(f"{RED_COLOR}Insertion Failed: {table["table"]} does not exist.{RESET_COLOR}")
         return False
 
-    code = 0
-    description = "test"
+    for i in range(len(data)):
 
-    cursor.execute(f"INSERT INTO PATRON_TYPE (PatronTypeCode, PatronTypeDescription) VALUES ({code}, \"{description}\");")
+        code = data.at[i, table["file code"]]
+        if (code in used_codes):
+            continue
+
+        description = data.at[i, table["file description"]]
+        cursor.execute(f"INSERT INTO {table["table"]} ({table["database code"]}, {table["database description"]}) VALUES ({code}, \"{description}\");")
+        used_codes.add(code)
+    
+    connection.commit()
     return True
 
 def reset_database():
@@ -104,7 +121,7 @@ def reset_database():
     cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
     print("Inserting data into database...")
-    if (not insert_patron_type()):
+    if (not insert_basic_table(PATRON_TYPE)):
         print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
         return
 
