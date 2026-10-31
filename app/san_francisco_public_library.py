@@ -10,6 +10,8 @@ GREEN_COLOR = "\033[32m"
 
 SHOW_TABLES_COMMAND = "0"
 QUERY_TABLE_COMMAND = "1"
+CUSTOM_COMMAND = "2"
+CUSTOM_QUERY_COMMAND = "3"
 RESET_DATABASE_COMMAND = "100"
 HELP_COMMAND = "help"
 EXIT_COMMAND = "exit"
@@ -28,7 +30,7 @@ cursor = connection.cursor()
 
 data = pd.DataFrame()
 
-def get_boolean_input(prompt = ""):
+def get_boolean_input(prompt: str = ""):
 
     print(f"{prompt} [{CYAN_COLOR}y{RESET_COLOR},{CYAN_COLOR}N{RESET_COLOR}]")
     answer = input(f"   > {YELLOW_COLOR}").casefold()
@@ -37,7 +39,7 @@ def get_boolean_input(prompt = ""):
         return True
     return False
 
-def print_command(command, description):
+def print_command(command: int, description: str):
     num_of_spaces = len(command)
 
     for i in range(5 - num_of_spaces):
@@ -50,18 +52,41 @@ def print_help():
     print("--------------------------------------------")
     print_command(SHOW_TABLES_COMMAND, "Shows all the tables in the database.")
     print_command(QUERY_TABLE_COMMAND, "Shows all the data from a table.")
+    print_command(CUSTOM_COMMAND, "Execute command directly into MySQL server.")
+    print_command(CUSTOM_QUERY_COMMAND, "Execute command directly into MySQL server and print output.")
     print_command(RESET_DATABASE_COMMAND, "Clears the database and adds all data to it.")
     print()
     print_command(HELP_COMMAND, "Prints all the available commands.")
     print_command(EXIT_COMMAND, "Exits the program.")
 
-def print_formated_table(table_data):
-    pass
+def print_formated_table():
+    query = pd.DataFrame(cursor.fetchall(), columns=cursor.column_names)
+    print(query.to_markdown(index=False, tablefmt="psql"))
+
+def does_table_exist(table_name: str):
+
+    cursor.execute("SHOW TABLES")
+    for table in cursor.fetchall():
+        if (table[0] == table_name.upper()):
+            return True
+    return False
+
+def insert_patron_type():
+
+    if (not does_table_exist("PATRON_TYPE")):
+        print(f"{RED_COLOR}Insertion Failed: PATRON_TYPE does not exist.{RESET_COLOR}")
+        return False
+
+    code = 0
+    description = "test"
+
+    cursor.execute(f"INSERT INTO PATRON_TYPE (PatronTypeCode, PatronTypeDescription) VALUES ({code}, \"{description}\");")
+    return True
 
 def reset_database():
     global data
 
-    if (not get_boolean_input("This may potentially corrupt the database. Continut?")):
+    if (not get_boolean_input("This may potentially corrupt the database. Continue?")):
         return
 
     print("Opening data file...")
@@ -79,7 +104,9 @@ def reset_database():
     cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
     print("Inserting data into database...")
-    # Stuff goes here
+    if (not insert_patron_type()):
+        print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
+        return
 
     print(f"{GREEN_COLOR}Operation Completed Succesfully{RESET_COLOR}")
 
@@ -88,18 +115,12 @@ def query_table():
     query_table = input(f"Which table would you like to query?\n   > {YELLOW_COLOR}").upper()
     print(RESET_COLOR, end="")
 
-    cursor.execute("SHOW TABLES")
-    is_valid_table = False
-    for table in cursor.fetchall():
-        if (query_table == table[0]):
-            is_valid_table = True
-            break
-    if (not is_valid_table):
-        print(f"{RED_COLOR}Invalid Table{RESET_COLOR}")
+    if (not does_table_exist(query_table)):
+        print(f"{RED_COLOR}Invalid Table.{RESET_COLOR}")
         return
 
     cursor.execute(f"SELECT * FROM {query_table}")
-    print(cursor.fetchall())
+    print_formated_table()
 
 
 def execute_operation(operation):

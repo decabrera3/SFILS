@@ -57,5 +57,14 @@ CREATE TABLE PATRON (
         REFERENCES HOME_LIBRARY (HomeLibraryCode)
 );
 
-INSERT INTO PATRON_TYPE (PatronTypeCode, PatronTypeDescription) VALUES (0, "test 0");
-INSERT INTO PATRON_TYPE (PatronTypeCode, PatronTypeDescription) VALUES (1, "test 1");
+INSERT INTO PATRON_TYPE (PatronTypeCode, PatronTypeDescription) VALUES (0, "patron type 0");
+INSERT INTO PATRON_TYPE (PatronTypeCode, PatronTypeDescription) VALUES (1, "patron type 1");
+
+INSERT INTO AGE_RANGE (AgeRangeCode, AgeRangeDescription) VALUES (0, "age range 0");
+
+INSERT INTO NOTIFICATION_MEDIUM (NotificationMediumCode, NotificationDescription) VALUES (0, "notif 0");
+
+INSERT INTO HOME_LIBRARY (HomeLibraryCode, HomeLibraryDescription) VALUES (0, "home library code 0");
+
+INSERT INTO PATRON (PatronTypeCode, AgeRangeCode, NotificationPreference, HomeLibraryCode, CheckoutTotal, RenewalTotal, ProvidedEmailAddress, WithinSanFranciscoCounty, YearPatronRegistered) 
+VALUES (1, 0, 0, 0, 10, 5, TRUE, FALSE, 2020);
