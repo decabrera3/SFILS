@@ -1,6 +1,8 @@
 
 import mysql.connector
 import pandas as pd
+import os
+from dotenv import load_dotenv
 
 RESET_COLOR = "\033[0m"
 RED_COLOR = "\033[31m"
@@ -20,18 +22,44 @@ TEST_COMMAND = "test"
 DATABASE = "san_francisco_public_library"
 
 PATRON_TYPE = {
-    "table" : "PATRON_TYPE",
-    "database code" : "PatronTypeCode",
-    "database description" : "PatronTypeDescription",
-    "file code" : "Patron Type Code\npatron_type_code",
-    "file description" : "Patron Type Definition\n"
+    "table": "PATRON_TYPE",
+    "database code": "PatronTypeCode",
+    "database description": "PatronTypeDescription",
+    "file code": "Patron Type Code\npatron_type_code",
+    "file description": "Patron Type Definition\n"
+}
+NOTIFICATION_MEDIUM = {
+    "table": "NOTIFICATION_MEDIUM",
+    "database code": "NotificationMediumCode",
+    "database description":"NotificationDescription",
+    "file code": "Notification Preference Code\nnotification_medium_code",
+    "file description": "Notification Code Definition"
+}
+HOME_LIBRARY = {
+    "table": "HOME_LIBRARY",
+    "database code": "HomeLibraryCode",
+    "database description": "HomeLibraryDescription",
+    "file code": "Home Library Code\nhome_library_code",
+    "file description":"Home Library Definition\n"
+}
+AGE_RANGE = {
+    "table": "AGE_RANGE",
+    "database code": "AgeRangeCode",
+    "database description": "AgeRangeDescription",
+    "file code": "Age Range\n",
+    "file description": "Age Range\n"
+}
+PATRON = {
+    "table": "PATRON"
 }
 
+load_dotenv()
+
 config = {
-        "user" : "root",
-        "password" : "MyFunP@ssw0rd",
-        "host" : "127.0.0.1",
-        "database" : DATABASE
+        "user": "root",
+        "password": os.environ.get("MYSQL_ROOT_PASSWORD"),
+        "host": "127.0.0.1",
+        "database": DATABASE
         }
 connection = mysql.connector.connect(**config)
 cursor = connection.cursor()
@@ -79,7 +107,7 @@ def does_table_exist(table_name: str) -> bool:
             return True
     return False
 
-def insert_basic_table(table: dict) -> bool:
+def insert_basic_table(table: dict, is_string: bool) -> bool:
 
     used_codes = set()
 
@@ -87,18 +115,51 @@ def insert_basic_table(table: dict) -> bool:
         print(f"{RED_COLOR}Insertion Failed: {table["table"]} does not exist.{RESET_COLOR}")
         return False
 
+    querry = f"INSERT INTO {table["table"]} ({table["database code"]}, {table["database description"]}) VALUES (%s, %s);"
+
     for i in range(len(data)):
 
         code = data.at[i, table["file code"]]
+        if (not is_string):
+            code = int(code)
+
         if (code in used_codes):
             continue
-
-        description = data.at[i, table["file description"]]
-        cursor.execute(f"INSERT INTO {table["table"]} ({table["database code"]}, {table["database description"]}) VALUES ({code}, \"{description}\");")
         used_codes.add(code)
-    
+        description = data.at[i, table["file description"]]
+        cursor.execute(querry, (code, description))
+
     connection.commit()
     return True
+
+def insert_age_range() -> bool:
+
+    used_age_ranges = set()
+
+    if (not does_table_exist(AGE_RANGE["table"])):
+        print(f"{RED_COLOR}Insertion Failed: {AGE_RANGE["table"]} does not exist.{RESET_COLOR}")
+        return False
+
+    querry = f"INSERT INTO {AGE_RANGE["table"]} ({AGE_RANGE["database code"]}, {AGE_RANGE["database description"]}) VALUES (%s, %s);"
+
+    for i in range(len(data)):
+
+        age_range = data.at[i, AGE_RANGE["file code"]]
+
+        if ((age_range in used_age_ranges) or (age_range == "")):
+            continue
+        used_age_ranges.add(age_range)
+        cursor.execute(querry, (len(used_age_ranges), age_range))
+
+    connection.commit()
+    return True
+
+def insert_patron() -> bool:
+
+    querry = f"INSERT INTO "
+
+    for i in range(len(data)):
+        pass
 
 def reset_database():
     global data
@@ -107,7 +168,7 @@ def reset_database():
         return
 
     print("Opening data file...")
-    data = pd.read_excel("../Data.xlsx")
+    data = pd.read_excel("../Data.xlsx", keep_default_na=False)
 
     print("Clearing database...")
     cursor.execute("SHOW TABLES")
@@ -121,7 +182,16 @@ def reset_database():
     cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
     print("Inserting data into database...")
-    if (not insert_basic_table(PATRON_TYPE)):
+    if (not insert_basic_table(PATRON_TYPE, False)):
+        print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
+        return
+    if (not insert_age_range()):
+        print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
+        return
+    if (not insert_basic_table(NOTIFICATION_MEDIUM, True)):
+        print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
+        return
+    if (not insert_basic_table(HOME_LIBRARY, True)):
         print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
         return
 
