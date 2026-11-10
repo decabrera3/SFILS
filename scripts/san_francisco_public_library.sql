@@ -11,7 +11,7 @@ CREATE TABLE PATRON_TYPE (
 );
 
 CREATE TABLE AGE_RANGE (
-	AgeRangeCode TINYINT UNSIGNED NOT NULL,
+	AgeRangeCode TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
     AgeRangeDescription VARCHAR(20) NOT NULL,
     
     CONSTRAINT AGE_RANGE_CODE_PK PRIMARY KEY (AgeRangeCode)
@@ -34,7 +34,7 @@ CREATE TABLE HOME_LIBRARY (
 CREATE TABLE PATRON (
     PatronNumber INT UNSIGNED NOT NULL AUTO_INCREMENT,
     PatronTypeCode TINYINT UNSIGNED NOT NULL,
-    AgeRangeCode TINYINT UNSIGNED NOT NULL,
+    AgeRangeCode TINYINT UNSIGNED NULL,
     NotificationPreference CHAR(1) NOT NULL,
     HomeLibraryCode VARCHAR(5),
     
@@ -56,15 +56,3 @@ CREATE TABLE PATRON (
     CONSTRAINT HOME_LIBRARY_CODE_FK FOREIGN KEY (HomelibraryCode) 
         REFERENCES HOME_LIBRARY (HomeLibraryCode)
 );
-
-INSERT INTO PATRON_TYPE (PatronTypeCode, PatronTypeDescription) VALUES (0, "patron type 0");
-INSERT INTO PATRON_TYPE (PatronTypeCode, PatronTypeDescription) VALUES (1, "patron type 1");
-
-INSERT INTO AGE_RANGE (AgeRangeCode, AgeRangeDescription) VALUES (0, "age range 0");
-
-INSERT INTO NOTIFICATION_MEDIUM (NotificationMediumCode, NotificationDescription) VALUES (0, "notif 0");
-
-INSERT INTO HOME_LIBRARY (HomeLibraryCode, HomeLibraryDescription) VALUES (0, "home library code 0");
-
-INSERT INTO PATRON (PatronTypeCode, AgeRangeCode, NotificationPreference, HomeLibraryCode, CheckoutTotal, RenewalTotal, ProvidedEmailAddress, WithinSanFranciscoCounty, YearPatronRegistered) 
-VALUES (1, 0, 0, 0, 10, 5, TRUE, FALSE, 2020);

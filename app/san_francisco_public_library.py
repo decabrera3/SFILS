@@ -17,7 +17,6 @@ CUSTOM_QUERY_COMMAND = "3"
 RESET_DATABASE_COMMAND = "100"
 HELP_COMMAND = "help"
 EXIT_COMMAND = "exit"
-TEST_COMMAND = "test"
 
 DATABASE = "san_francisco_public_library"
 
@@ -115,7 +114,7 @@ def insert_basic_table(table: dict, is_string: bool) -> bool:
         print(f"{RED_COLOR}Insertion Failed: {table["table"]} does not exist.{RESET_COLOR}")
         return False
 
-    querry = f"INSERT INTO {table["table"]} ({table["database code"]}, {table["database description"]}) VALUES (%s, %s);"
+    command = f"INSERT INTO {table["table"]} ({table["database code"]}, {table["database description"]}) VALUES (%s, %s);"
 
     for i in range(len(data)):
 
@@ -127,7 +126,7 @@ def insert_basic_table(table: dict, is_string: bool) -> bool:
             continue
         used_codes.add(code)
         description = data.at[i, table["file description"]]
-        cursor.execute(querry, (code, description))
+        cursor.execute(command, (code, description))
 
     connection.commit()
     return True
@@ -140,7 +139,7 @@ def insert_age_range() -> bool:
         print(f"{RED_COLOR}Insertion Failed: {AGE_RANGE["table"]} does not exist.{RESET_COLOR}")
         return False
 
-    querry = f"INSERT INTO {AGE_RANGE["table"]} ({AGE_RANGE["database code"]}, {AGE_RANGE["database description"]}) VALUES (%s, %s);"
+    command = f"INSERT INTO {AGE_RANGE["table"]} ({AGE_RANGE["database code"]}, {AGE_RANGE["database description"]}) VALUES (%s, %s);"
 
     for i in range(len(data)):
 
@@ -149,17 +148,76 @@ def insert_age_range() -> bool:
         if ((age_range in used_age_ranges) or (age_range == "")):
             continue
         used_age_ranges.add(age_range)
-        cursor.execute(querry, (len(used_age_ranges), age_range))
+        cursor.execute(command, (len(used_age_ranges), age_range))
 
     connection.commit()
     return True
 
 def insert_patron() -> bool:
 
-    querry = f"INSERT INTO "
+    if (not does_table_exist("PATRON")):
+        print(f"{RED_COLOR}Insertion Failed: PATRON does not exist.{RESET_COLOR}")
+        return False
+
+    command = f"""
+    INSERT INTO PATRON (PatronTypeCode, AgeRangeCode, NotificationPreference, HomeLibraryCode,
+    CheckoutTotal, RenewalTotal, CirculationActiveMonth, CirculationActiveYear, ProvidedEmailAddress, WithinSanFranciscoCounty, YearPatronRegistered
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+
+    months = {
+        "January": "0",
+        "February": "1",
+        "March": "2",
+        "April": "3",
+        "May": "4",
+        "June": "5",
+        "July": "6",
+        "August": "7",
+        "September": "8",
+        "October": "9",
+        "November": "10",
+        "December": "11"
+    }
+
+    age_ranges = {}
+
+    cursor.execute("SELECT * FROM AGE_RANGE")
+    for i in cursor.fetchall():
+        age_ranges[i[1]] = i[0]
 
     for i in range(len(data)):
-        pass
+        patron_type_code = int(data.at[i, PATRON_TYPE["file code"]])
+        age_range_code = data.at[i, AGE_RANGE["file code"]]
+        if ((age_range_code != None) and (age_range_code != '')):
+            age_range_code = age_ranges[age_range_code]
+        else:
+            age_range_code = None
+
+        notification_preference = data.at[i, NOTIFICATION_MEDIUM["file code"]]
+        home_library_code = data.at[i, HOME_LIBRARY["file code"]]
+        
+        checkout_total = int(data.at[i, "Total Checkouts\ncheckout_total"])
+        renewal_total = int(data.at[i, "Total Renewals\nrenewal_total"])
+        circulation_active_month = 0
+        circulation_active_year = 0
+        if ((data.at[i, "Circulation Active Month\n"] != "") and (data.at[i, "Circulation Active Month\n"] != " ")):
+            circulation_active_month = int(months[data.at[i, "Circulation Active Month\n"]])
+        else:
+            circulation_active_month = None
+        if (data.at[i, "Circulation Active Year\n"] != ""):
+            circulation_active_year = int(data.at[i, "Circulation Active Year\n"])
+        else: circulation_active_year = None
+        provided_email_address = data.at[i, "Provided Email Address\n"]
+        within_san_francisco_county = data.at[i, "Within San Francisco County"]
+        year_patron_registered = int(data.at[i, "Year Patron Registered"])
+
+        cursor.execute(command, (patron_type_code, age_range_code, notification_preference, home_library_code, 
+                       checkout_total, renewal_total, circulation_active_month, circulation_active_year, 
+                       provided_email_address, within_san_francisco_county, year_patron_registered))
+
+    connection.commit()
+    return True
 
 def reset_database():
     global data
@@ -192,6 +250,9 @@ def reset_database():
         print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
         return
     if (not insert_basic_table(HOME_LIBRARY, True)):
+        print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
+        return
+    if (not insert_patron()):
         print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
         return
 
@@ -230,9 +291,6 @@ def execute_operation(operation):
     
     elif (operation == RESET_DATABASE_COMMAND):
         reset_database()
-    
-    elif (operation == "test"):
-        print(data.head(8))
     
     else:
         print(f"{RED_COLOR}Invalid Command.{RESET_COLOR}")
