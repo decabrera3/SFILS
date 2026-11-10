@@ -2,6 +2,7 @@
 import mysql.connector
 import pandas as pd
 import os
+from time import perf_counter
 from dotenv import load_dotenv
 
 RESET_COLOR = "\033[0m"
@@ -225,6 +226,8 @@ def reset_database():
     if (not get_boolean_input("This may potentially corrupt the database. Continue?")):
         return
 
+    start_time = perf_counter()
+
     print("Opening data file...")
     data = pd.read_excel("../Data.xlsx", keep_default_na=False)
 
@@ -256,6 +259,10 @@ def reset_database():
         print(f"{RED_COLOR}Aborting database insertion{RESET_COLOR}")
         return
 
+    stop_time = perf_counter()
+    total_time = stop_time - start_time
+    print(f"<{total_time:.2f}>")
+
     print(f"{GREEN_COLOR}Operation Completed Succesfully{RESET_COLOR}")
 
 def query_table():
@@ -263,12 +270,33 @@ def query_table():
     query_table = input(f"Which table would you like to query?\n   > {YELLOW_COLOR}").upper()
     print(RESET_COLOR, end="")
 
+    start_time = perf_counter()
+
     if (not does_table_exist(query_table)):
         print(f"{RED_COLOR}Invalid Table.{RESET_COLOR}")
         return
 
     cursor.execute(f"SELECT * FROM {query_table}")
     print_formated_table()
+
+    stop_time = perf_counter()
+    total_time = stop_time - start_time
+    print(f"<{total_time:.2f}>")
+
+def show_tables():
+
+    start_time = perf_counter()
+        
+    cursor.execute("SHOW TABLES")
+
+    print("\nTables in this database:")
+    for table in cursor.fetchall():
+        print(table[0])
+
+        
+    stop_time = perf_counter()
+    total_time = stop_time - start_time
+    print(f"<{total_time:.2f}>")
 
 
 def execute_operation(operation):
@@ -280,11 +308,7 @@ def execute_operation(operation):
         print_help()
     
     elif(operation == SHOW_TABLES_COMMAND):
-        cursor.execute("SHOW TABLES")
-
-        print("\nTables in this database:")
-        for table in cursor.fetchall():
-            print(table[0])
+        show_tables()
     
     elif (operation == QUERY_TABLE_COMMAND):
         query_table()
