@@ -13,8 +13,7 @@ GREEN_COLOR = "\033[32m"
 
 SHOW_TABLES_COMMAND = "0"
 QUERY_TABLE_COMMAND = "1"
-CUSTOM_COMMAND = "2"
-CUSTOM_QUERY_COMMAND = "3"
+PRINT_FINDINGS_COMMAND = "2"
 RESET_DATABASE_COMMAND = "100"
 HELP_COMMAND = "help"
 EXIT_COMMAND = "exit"
@@ -88,8 +87,7 @@ def print_help():
     print("--------------------------------------------")
     print_command(SHOW_TABLES_COMMAND, "Shows all the tables in the database.")
     print_command(QUERY_TABLE_COMMAND, "Shows all the data from a table.")
-    print_command(CUSTOM_COMMAND, "Execute command directly into MySQL server.")
-    print_command(CUSTOM_QUERY_COMMAND, "Execute command directly into MySQL server and print output.")
+    print_command(PRINT_FINDINGS_COMMAND, "Show the data in reference to patrons within a specified age range.")
     print_command(RESET_DATABASE_COMMAND, "Clears the database and adds all data to it.")
     print()
     print_command(HELP_COMMAND, "Prints all the available commands.")
@@ -261,7 +259,7 @@ def reset_database():
 
     stop_time = perf_counter()
     total_time = stop_time - start_time
-    print(f"<{total_time:.2f}>")
+    print(f"<{total_time:.2f}s>")
 
     print(f"{GREEN_COLOR}Operation Completed Succesfully{RESET_COLOR}")
 
@@ -281,7 +279,7 @@ def query_table():
 
     stop_time = perf_counter()
     total_time = stop_time - start_time
-    print(f"<{total_time:.2f}>")
+    print(f"<{total_time:.2f}s>")
 
 def show_tables():
 
@@ -296,7 +294,57 @@ def show_tables():
         
     stop_time = perf_counter()
     total_time = stop_time - start_time
-    print(f"<{total_time:.2f}>")
+    print(f"<{total_time:.2f}s>")
+
+def print_findings():
+
+    cursor.execute("SELECT * FROM AGE_RANGE")
+    age_ranges = cursor.fetchall()
+    print("Available Age Ranges\n----------------------")
+    for i in age_ranges:
+        print(f"{CYAN_COLOR}{i[0]:2d}{RESET_COLOR} | {i[1]}")
+
+    age_range_code = input(f"\nWhich Age Range would you like to get data about?\n  > {YELLOW_COLOR}")
+    print(RESET_COLOR, end="")
+
+    try:
+        age_range_code = int(age_range_code)
+    except:
+        print(f"{RED_COLOR}Invalid Age Range Code{RESET_COLOR}")
+        return
+
+    if ((age_range_code <= 0) or (age_range_code > len(age_ranges))):
+        print(f"{RED_COLOR}Invalid Age Range Code{RESET_COLOR}")
+        return
+
+    total_patrons, repeated_patrons, renewed_patrons = 0, 0, 0
+    start_time = perf_counter()
+
+    cursor.execute(f"SELECT CheckoutTotal, RenewalTotal FROM PATRON WHERE AgeRangeCode = {age_range_code};")
+
+    for i in cursor.fetchall():
+        total_patrons = total_patrons + 1
+        if (i[0] > 1):
+            repeated_patrons = repeated_patrons + 1
+
+        if (i[1] > 0):
+            renewed_patrons = renewed_patrons + 1
+
+    results = f"""
+Stats for Patrons in Age Range: {age_ranges[age_range_code - 1][1]}:
+---------------------------------------------
+Total Patrons: {total_patrons}
+Total Repeated Patrons: {repeated_patrons}
+Total Patrons who Renewed: {renewed_patrons}
+
+Percentage of Repeated Patrons: {((repeated_patrons / total_patrons) * 100):.2f}%
+Percentage of Renewed Patrons: {((renewed_patrons / total_patrons) * 100):.2f}%"""
+
+    print(results)
+
+    stop_time = perf_counter()
+    total_time = stop_time - start_time
+    print(f"<{total_time:.2f}s>")
 
 
 def execute_operation(operation):
@@ -312,6 +360,9 @@ def execute_operation(operation):
     
     elif (operation == QUERY_TABLE_COMMAND):
         query_table()
+
+    elif (operation == PRINT_FINDINGS_COMMAND):
+        print_findings()
     
     elif (operation == RESET_DATABASE_COMMAND):
         reset_database()
